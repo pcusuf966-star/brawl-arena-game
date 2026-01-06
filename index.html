@@ -1,0 +1,2369 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brawl Arena - Ultimate Update</title>
+    <style>
+        /* --- GLOBAL STYLES --- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Comic Sans MS', sans-serif;
+            background: linear-gradient(135deg, #1a2a6c 0%, #b21f1f 50%, #fdbb2d 100%);
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* --- GAME CONTAINER --- */
+        #gameContainer {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        canvas {
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+            border-radius: 4px;
+            cursor: crosshair;
+        }
+
+        /* --- UI OVERLAYS & MENUS --- */
+        .menu {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.96);
+            border-radius: 25px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+            text-align: center;
+            display: none;
+            z-index: 20;
+            min-width: 400px;
+            max-width: 90%;
+            border: 4px solid #333;
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .menu.active {
+            display: block;
+        }
+
+        @keyframes popIn {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        h1 {
+            color: #2c3e50;
+            font-size: 56px;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 2px 2px 0 #eee;
+            -webkit-text-stroke: 1px #000;
+        }
+
+        h2 {
+            color: #444;
+            font-size: 36px;
+            margin-bottom: 25px;
+        }
+
+        /* --- BUTTONS --- */
+        .btn {
+            background: linear-gradient(to bottom, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: 2px solid #fff;
+            padding: 15px 40px;
+            font-size: 22px;
+            border-radius: 12px;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.2s;
+            font-weight: 800;
+            box-shadow: 0 6px 0 #2980b9, 0 10px 10px rgba(0,0,0,0.3);
+            text-transform: uppercase;
+            display: inline-block;
+            min-width: 200px;
+        }
+
+        .btn:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 0 #2980b9, 0 15px 20px rgba(0,0,0,0.3);
+            filter: brightness(1.1);
+        }
+
+        .btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #2980b9, 0 5px 5px rgba(0,0,0,0.3);
+        }
+
+        .btn-red {
+            background: linear-gradient(to bottom, #ff6b6b, #ee5253);
+            box-shadow: 0 6px 0 #c0392b, 0 10px 10px rgba(0,0,0,0.3);
+        }
+        .btn-red:hover { box-shadow: 0 10px 0 #c0392b, 0 15px 20px rgba(0,0,0,0.3); }
+        .btn-red:active { box-shadow: 0 2px 0 #c0392b, 0 5px 5px rgba(0,0,0,0.3); }
+
+        .btn-green {
+            background: linear-gradient(to bottom, #2ecc71, #27ae60);
+            box-shadow: 0 6px 0 #1e8449, 0 10px 10px rgba(0,0,0,0.3);
+        }
+        .btn-green:hover { box-shadow: 0 10px 0 #1e8449, 0 15px 20px rgba(0,0,0,0.3); }
+
+        /* --- BRAWLER SELECTION --- */
+        .brawler-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 20px;
+            max-height: 55vh;
+            overflow-y: auto;
+            padding: 15px;
+            background: #f0f2f5;
+            border-radius: 15px;
+            border: 2px solid #ddd;
+        }
+
+        .brawler-card {
+            background: white;
+            border-radius: 15px;
+            padding: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 4px solid #ccc;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .brawler-card:hover {
+            transform: scale(1.05);
+            border-color: #3498db;
+            z-index: 5;
+        }
+
+        .brawler-card.selected {
+            border-color: #f1c40f;
+            background: #fff9c4;
+            box-shadow: 0 0 15px #f1c40f;
+            transform: scale(1.1);
+            z-index: 10;
+        }
+
+        .brawler-card.locked {
+            filter: grayscale(1);
+            opacity: 0.7;
+            border-color: #555;
+        }
+
+        .brawler-icon {
+            width: 70px;
+            height: 70px;
+            border-radius: 12px;
+            margin: 10px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            color: white;
+            text-shadow: 2px 2px 0 rgba(0,0,0,0.5);
+            border: 2px solid rgba(0,0,0,0.1);
+        }
+
+        .brawler-name { font-weight: 800; font-size: 14px; margin-bottom: 5px; color: #333; }
+        .brawler-stats { font-size: 11px; color: #666; line-height: 1.4; }
+
+        .rarity {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 4px 0;
+            font-size: 10px;
+            font-weight: 900;
+            color: white;
+            text-transform: uppercase;
+            text-shadow: 1px 1px 0 rgba(0,0,0,0.5);
+        }
+        /* Update Colors based on Request */
+        .rarity.starting { background: #87CEEB; } /* Sky Blue */
+        .rarity.rare { background: #2ecc71; } /* Green */
+        .rarity.superrare { background: #3498db; } /* Blue */
+        .rarity.epic { background: #9b59b6; } /* Purple */
+        .rarity.legendary { background: #f1c40f; } /* Yellow */
+
+        /* --- SHOP STYLES --- */
+        .shop-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            padding: 10px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .shop-item {
+            background: white;
+            border-radius: 15px;
+            padding: 15px;
+            border: 3px solid #eee;
+            position: relative;
+        }
+        
+        .info-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #3498db;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            font-size: 16px;
+            line-height: 24px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        /* --- HUD & IN-GAME --- */
+        .hud-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: none;
+        }
+        .hud-container.active { display: block; }
+
+        .top-left-hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .player-badge {
+            background: rgba(0,0,0,0.6);
+            padding: 10px 20px;
+            border-radius: 50px;
+            color: white;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+
+        .hp-bar-container {
+            width: 200px;
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid white;
+            margin-top: 5px;
+        }
+
+        .hp-bar-fill {
+            height: 100%;
+            background: #2ecc71;
+            width: 100%;
+            transition: width 0.2s;
+        }
+
+        .ammo-bar-container {
+            width: 150px;
+            height: 10px;
+            background: #333;
+            border-radius: 5px;
+            overflow: hidden;
+            border: 1px solid white;
+            margin-top: 2px;
+        }
+        .ammo-bar-fill {
+            height: 100%;
+            background: #e67e22;
+            width: 100%;
+            transition: width 0.1s;
+        }
+
+        .enemies-left {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(231, 76, 60, 0.9);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 24px;
+            font-weight: 900;
+            text-transform: uppercase;
+            box-shadow: 0 5px 0 #c0392b;
+        }
+
+        .ultra-button-hud {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: #333;
+            border: 4px solid #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.5;
+            transition: all 0.3s;
+        }
+
+        .ultra-button-hud.ready {
+            background: radial-gradient(circle, #f1c40f, #f39c12);
+            opacity: 1;
+            box-shadow: 0 0 30px #f1c40f;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .ultra-skull { font-size: 40px; }
+
+        /* --- EXIT BUTTON --- */
+        .exit-btn {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            pointer-events: auto;
+            border: 2px solid white;
+        }
+
+        /* --- MODALS --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        .modal-overlay.active { display: flex; }
+
+        .modal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+            border: 5px solid #34495e;
+            position: relative;
+        }
+
+        .currency-display {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 15px;
+            background: rgba(255,255,255,0.9);
+            padding: 10px 20px;
+            border-radius: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            z-index: 50;
+            font-weight: bold;
+        }
+
+        input[type="text"], input[type="number"] {
+            padding: 15px;
+            font-size: 18px;
+            border-radius: 10px;
+            border: 2px solid #ddd;
+            width: 80%;
+            margin: 20px 0;
+            text-align: center;
+            font-family: inherit;
+        }
+
+        /* Floating Text Animation */
+        .floating-text {
+            position: absolute;
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+            pointer-events: none;
+            animation: floatUp 1s forwards;
+            text-shadow: 1px 1px 0 #000;
+        }
+
+        @keyframes floatUp {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(-50px); opacity: 0; }
+        }
+    </style>
+    <link rel="stylesheet" href="/index.css">
+</head>
+<body>
+    <!-- CONTAINER -->
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- UI: CURRENCY -->
+        <div id="currencyDisplay" class="currency-display" style="display: none;">
+            <span>💰 <span id="coinsVal">0</span></span>
+            <span>💎 <span id="gemsVal">0</span></span>
+        </div>
+
+        <!-- UI: HUD -->
+        <div id="gameHud" class="hud-container">
+            <div class="top-left-hud">
+                <div class="player-badge">
+                    <span id="hudName">Player</span>
+                    <span>🏆 <span id="hudTrophies">0</span></span>
+                </div>
+                <div class="hp-bar-container">
+                    <div id="hudHpBar" class="hp-bar-fill"></div>
+                </div>
+                <!-- Ammo bar mainly for reload visual -->
+                <div class="ammo-bar-container">
+                    <div id="hudAmmoBar" class="ammo-bar-fill"></div>
+                </div>
+            </div>
+
+            <div class="enemies-left">
+                💀 <span id="hudEnemies">9</span>
+            </div>
+
+            <div id="ultraBtn" class="ultra-button-hud">
+                <div class="ultra-skull">☠️</div>
+            </div>
+
+            <button class="exit-btn" onclick="game.exitGame()">ВЫХОД (ESC)</button>
+        </div>
+
+        <!-- MENUS -->
+
+        <!-- NAME INPUT -->
+        <div id="nameModal" class="modal-overlay">
+            <div class="modal-content">
+                <h2>ДОБРО ПОЖАЛОВАТЬ!</h2>
+                <p>Введите имя бойца:</p>
+                <input type="text" id="nameInput" maxlength="12" placeholder="Ваш Ник">
+                <button class="btn btn-green" onclick="game.setName()">ПОДТВЕРДИТЬ</button>
+            </div>
+        </div>
+
+        <!-- INFO MODAL -->
+        <div id="infoModal" class="modal-overlay">
+            <div class="modal-content">
+                <h2>ℹ️ ИНФОРМАЦИЯ О ЯЩИКЕ</h2>
+                <p id="infoText" style="font-size: 20px; line-height: 1.6; margin: 20px 0;"></p>
+                <button class="btn" onclick="document.getElementById('infoModal').classList.remove('active')">ЗАКРЫТЬ</button>
+            </div>
+        </div>
+        
+        <!-- CHEAT AUTH MODAL -->
+        <div id="cheatAuthMenu" class="modal-overlay">
+            <div class="modal-content">
+                <h2>ВВЕДИТЕ ПАРОЛЬ</h2>
+                <input type="text" id="cheatPasswordInput" placeholder="Пароль">
+                <div id="cheatError" style="color:red; font-weight:900; font-size:24px; display:none; margin:10px 0;">ЗАПРЕЩЕНО</div>
+                <br>
+                <button class="btn btn-green" onclick="game.checkCheatPassword()">ПРОДОЛЖИТЬ</button>
+                <button class="btn btn-red" onclick="game.openSettings()">ОТМЕНА</button>
+            </div>
+        </div>
+
+        <!-- MAIN MENU -->
+        <div id="mainMenu" class="menu active">
+            <h1>🔥 BRAWL ARENA 🔥</h1>
+            <div class="player-badge" style="display:inline-flex; margin-bottom: 20px; background: #34495e;">
+                <span id="menuName">Player</span>
+                <span>🏆 <span id="menuTrophies">0</span></span>
+            </div>
+            <br>
+            <button class="btn" onclick="game.openBrawlerSelect('battle')">⚔️ СРАЖЕНИЕ (10 ИГРОКОВ)</button>
+            <button class="btn" onclick="game.openBrawlerSelect('training')">🎯 ТРЕНИРОВКА</button>
+            <button class="btn" onclick="game.openShop()">🛒 МАГАЗИН</button>
+            <button class="btn" onclick="game.openSettings()">⚙️ НАСТРОЙКИ</button>
+        </div>
+
+        <!-- BRAWLER SELECT -->
+        <div id="brawlerSelect" class="menu" style="width: 800px; max-width: 95%;">
+            <h2>ВЫБЕРИТЕ БОЙЦА</h2>
+            <div id="brawlerGrid" class="brawler-grid"></div>
+            <br>
+            <button class="btn btn-green" onclick="game.startGame()">▶️ В БОЙ</button>
+            <button class="btn btn-red" onclick="game.toMenu()">НАЗАД</button>
+        </div>
+
+        <!-- SHOP -->
+        <div id="shopMenu" class="menu" style="width: 900px; max-width: 95%;">
+            <h2>МАГАЗИН</h2>
+            <div id="shopGrid" class="shop-grid"></div>
+            <br>
+            <button class="btn btn-red" onclick="game.toMenu()">НАЗАД</button>
+        </div>
+
+        <!-- SETTINGS -->
+        <div id="settingsMenu" class="menu">
+            <h2>НАСТРОЙКИ</h2>
+            <button class="btn" onclick="game.promptReset()">🗑️ СБРОС ПРОГРЕССА</button>
+            <button class="btn" onclick="game.openTargetsSettings()">🎯 МИШЕНИ В ТРЕНИРОВКЕ</button>
+            <button class="btn" onclick="game.openChangeNick()">✏️ ИЗМЕНИТЬ НИК</button>
+            <button class="btn" onclick="game.openHelp()">❓ УПРАВЛЕНИЕ</button>
+            <button class="btn btn-red" onclick="game.openCheatAuth()">💀 ЧИТЫ</button>
+            <br>
+            <button class="btn btn-red" onclick="game.toMenu()">НАЗАД</button>
+        </div>
+        
+        <!-- CHEAT DASHBOARD -->
+        <div id="cheatDashboard" class="menu">
+            <h2>🛠️ ПАНЕЛЬ РАЗРАБОТЧИКА</h2>
+            
+            <!-- НОВЫЕ ФУНКЦИИ ЧИТОВ -->
+            <div style="margin-bottom: 25px; background: #f8f9fa; padding: 15px; border-radius: 10px; border: 2px solid #ddd;">
+                <h3 style="color: #e74c3c; margin-bottom: 15px;">⚡ АКТИВНЫЕ ЧИТЫ</h3>
+                
+                <div style="display: flex; flex-direction: column; gap: 15px; align-items: flex-start; margin-left: 20px;">
+                    <!-- АИМ (автонаводка) -->
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                        <input type="checkbox" id="cheatAim" style="width: 20px; height: 20px; cursor: pointer;">
+                        <span style="font-size: 18px; font-weight: bold;">🎯 АИМ (автонаводка)</span>
+                    </label>
+                    
+                    <!-- ВХ (видеть противников сквозь стены) -->
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                        <input type="checkbox" id="cheatWallhack" style="width: 20px; height: 20px; cursor: pointer;">
+                        <span style="font-size: 18px; font-weight: bold;">👁️ ВХ (видеть сквозь стены)</span>
+                    </label>
+                    
+                    <!-- БЕСКОНЕЧНОЕ ЗДОРОВЬЕ -->
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                        <input type="checkbox" id="cheatGodMode" style="width: 20px; height: 20px; cursor: pointer;">
+                        <span style="font-size: 18px; font-weight: bold;">💉 БЕСКОНЕЧНОЕ ЗДОРОВЬЕ</span>
+                    </label>
+                </div>
+            </div>
+            
+            <div style="text-align:left; max-width:400px; margin:0 auto; font-size: 18px;">
+                <label>Монеты:</label>
+                <input type="number" id="cheatCoins" style="width:100%">
+                <label>Кристаллы:</label>
+                <input type="number" id="cheatGems" style="width:100%">
+                <label>Кубки (Текущий боец):</label>
+                <input type="number" id="cheatTrophies" style="width:100%">
+            </div>
+            <br>
+            <button class="btn btn-green" onclick="game.applyCheats()">ПРИМЕНИТЬ</button>
+            <button class="btn btn-red" onclick="game.toMenu()">В МЕНЮ</button>
+        </div>
+
+        <!-- TARGET SETTINGS -->
+        <div id="targetSettings" class="menu">
+            <h2>КОЛИЧЕСТВО МИШЕНЕЙ</h2>
+            <input type="number" id="targetCountInput" min="1" max="20" value="5">
+            <br>
+            <button class="btn btn-green" onclick="game.saveTargetSettings()">СОХРАНИТЬ</button>
+        </div>
+
+        <!-- CHANGE NICK -->
+        <div id="nickSettings" class="menu">
+            <h2>СМЕНА НИКА</h2>
+            <input type="text" id="newNickInput" maxlength="12">
+            <br>
+            <button class="btn btn-green" onclick="game.saveNewNick()">СОХРАНИТЬ</button>
+            <button class="btn btn-red" onclick="game.openSettings()">ОТМЕНА</button>
+        </div>
+
+        <!-- HELP -->
+        <div id="helpMenu" class="menu">
+            <h2>УПРАВЛЕНИЕ</h2>
+            <ul style="text-align: left; list-style: none; font-size: 20px; line-height: 2;">
+                <li>🕹️ <strong>WASD</strong> - Движение</li>
+                <li>🔫 <strong>ЛКМ</strong> - Атака</li>
+                <li>☠️ <strong>ПКМ</strong> - Ульта (когда готова)</li>
+                <li>🛑 <strong>ESC</strong> - Выход в меню</li>
+            </ul>
+            <br>
+            <button class="btn btn-red" onclick="game.openSettings()">НАЗАД</button>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * BRAWL ARENA - ULTIMATE UPDATE
+         * Contains updated mechanics, smart AI, and specific stats requested.
+         */
+
+        const game = {
+            canvas: null,
+            ctx: null,
+            width: 0,
+            height: 0,
+            
+            // State
+            state: 'loading', // menu, playing, shop, select
+            mode: 'battle',
+            lastTime: 0,
+            
+            // Player Data
+            playerName: '',
+            coins: 500,
+            gems: 50,
+            unlockedBrawlers: ['shelly'],
+            brawlerTrophies: {},
+            selectedBrawlerId: 'shelly',
+            targetCount: 5, // For training
+
+            // Game Entities
+            player: null,
+            enemies: [],
+            bullets: [],
+            particles: [],
+            walls: [],
+            boxes: [],
+            targets: [], // For training
+            turrets: [], // Penny's turret
+            zones: [], // Spike's zone, Byron's gas
+            camera: { x: 0, y: 0 },
+            
+            // Inputs
+            keys: {},
+            mouse: { x: 0, y: 0, left: false, right: false },
+
+            // Constants
+            worldWidth: 2500,
+            worldHeight: 2500,
+
+            // Audio Subsystem
+            audio: {
+                ctx: null,
+                isPlaying: false,
+                nextNoteTime: 0,
+                noteIndex: 0,
+                melody: [
+                    261.63, 261.63, 392.00, 392.00, 440.00, 440.00, 392.00, // Twinkle like (simple catchy)
+                    349.23, 349.23, 329.63, 329.63, 293.66, 293.66, 261.63
+                ],
+                melodyRhythm: [0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.8, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.8],
+
+                init() {
+                    if (!this.ctx) {
+                        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    }
+                    if (this.ctx.state === 'suspended') {
+                        this.ctx.resume();
+                    }
+                },
+
+                playTone(type, startFreq, endFreq, duration, vol=0.1) {
+                    if (!this.ctx) return;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(startFreq, this.ctx.currentTime);
+                    if (endFreq) {
+                        osc.frequency.exponentialRampToValueAtTime(endFreq, this.ctx.currentTime + duration);
+                    }
+                    gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                },
+
+                playShoot() { this.playTone('triangle', 600, 100, 0.1, 0.05); },
+                playHit() { this.playTone('sawtooth', 150, 50, 0.1, 0.05); },
+                playCollect() { this.playTone('sine', 800, 1200, 0.2, 0.1); },
+                playUltra() { this.playTone('square', 300, 900, 0.8, 0.1); },
+                playDie() { this.playTone('sawtooth', 300, 50, 1.0, 0.2); },
+
+                startMusic() {
+                    if (this.isPlaying || !this.ctx) return;
+                    this.isPlaying = true;
+                    this.noteIndex = 0;
+                    this.playNextNote();
+                },
+
+                stopMusic() {
+                    this.isPlaying = false;
+                },
+
+                playNextNote() {
+                    if (!this.isPlaying) return;
+                    const note = this.melody[this.noteIndex % this.melody.length];
+                    const duration = this.melodyRhythm[this.noteIndex % this.melodyRhythm.length];
+                    
+                    // Simple synth pluck
+                    this.playTone('triangle', note, note, duration * 0.8, 0.03);
+                    
+                    this.noteIndex++;
+                    setTimeout(() => this.playNextNote(), duration * 1000);
+                }
+            },
+
+            // Brawler Definitions (Stats & Colors Updated)
+            brawlers: {
+                shelly: {
+                    name: "Щелли", rarity: "starting", rarityName: "Начальный", color: "#87CEEB",
+                    hp: 7400, speed: 3.2,
+                    damage: 600, reload: 800, range: 280,
+                    projectiles: 5, spread: 0.3, type: "shotgun",
+                    ultra: { projectiles: 9, damage: 640, type: "super_shotgun" },
+                    price: 0,
+                    emoji: "👧" // Девочка с дробовиком
+                },
+                elpremo: {
+                    name: "Эль Примо", rarity: "rare", rarityName: "Редкий", color: "#2ecc71",
+                    hp: 12600, speed: 3.8,
+                    damage: 760, reload: 700, range: 100,
+                    projectiles: 4, type: "punch_burst", // 4 punches per attack
+                    ultra: { damage: 800, type: "jump_slam" }, // Updated to 800 dmg
+                    price: 300,
+                    emoji: "💪" // Качок
+                },
+                colt: {
+                    name: "Колт", rarity: "rare", rarityName: "Редкий", color: "#2ecc71",
+                    hp: 5600, speed: 3.4,
+                    damage: 720, reload: 1000, range: 450,
+                    projectiles: 6, type: "linear_burst", // 6 bullets
+                    ultra: { projectiles: 12, damage: 640, type: "linear_burst_super" }, // 2 sec duration logic
+                    price: 300,
+                    emoji: "🤠" // Ковбой
+                },
+                penny: {
+                    name: "Пенни", rarity: "superrare", rarityName: "Сверхредкий", color: "#3498db",
+                    hp: 6400, speed: 3.0,
+                    damage: 2000, reload: 1200, range: 400,
+                    projectiles: 1, type: "coin_bag", // Splits into 4 coins (1400 dmg)
+                    ultra: { damage: 3000, type: "turret_spawn" }, // Turret 6400HP, 3.3s reload
+                    price: 500,
+                    emoji: "👛" // Девочка с монетками
+                },
+                darryl: {
+                    name: "Дэррил", rarity: "superrare", rarityName: "Сверхредкий", color: "#3498db",
+                    hp: 10600, speed: 3.4,
+                    damage: 480, reload: 900, range: 220,
+                    projectiles: 10, spread: 0.4, type: "double_shotgun",
+                    ultra: { damage: 800, type: "roll" },
+                    price: 500,
+                    emoji: "🤖" // Робот-бочка
+                },
+                edgar: {
+                    name: "Эдгар", rarity: "epic", rarityName: "Эпический", color: "#9b59b6",
+                    hp: 6600, speed: 4.0,
+                    damage: 1080, reload: 500, range: 90,
+                    projectiles: 2, type: "heal_punch", // Heals 480
+                    ultra: { damage: 0, type: "speed_jump" }, // Speed boost 3s
+                    price: 800,
+                    emoji: "🧛" // Вампир
+                },
+                spike: {
+                    name: "Спайк", rarity: "legendary", rarityName: "Легендарный", color: "#f1c40f",
+                    hp: 5600, speed: 2.8,
+                    damage: 0, reload: 1000, range: 350, // Damage depends on spike hit (1080)
+                    projectiles: 1, type: "cactus_grenade", // Splits to 6 spikes
+                    ultra: { damage: 800, type: "slow_zone" }, // 4.5s
+                    price: 2000,
+                    emoji: "🌵" // Кактус
+                },
+                leon: {
+                    name: "Леон", rarity: "legendary", rarityName: "Легендарный", color: "#f1c40f",
+                    hp: 6800, speed: 3.6,
+                    damage: 960, reload: 900, range: 400,
+                    projectiles: 4, spread: 0.35, type: "shuriken_fan",
+                    ultra: { damage: 0, type: "invisibility" }, // 6s
+                    price: 2000,
+                    emoji: "🥷" // Ниндзя
+                },
+                byron: {
+                    name: "Байрон", rarity: "legendary", rarityName: "Легендарный", color: "#f1c40f",
+                    hp: 5600, speed: 3.2,
+                    damage: 640, reload: 1100, range: 450, // +160 DoT x4
+                    projectiles: 3, spread: 0.1, type: "poison_dart",
+                    ultra: { damage: 640, type: "poison_jump" }, // Jump, shoot 14 start, 14 end
+                    price: 2000,
+                    emoji: "🧪" // Алхимик
+                }
+            },
+
+            // --- INITIALIZATION ---
+            init() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+                
+                // Init audio context on first click
+                window.addEventListener('click', () => {
+                    this.audio.init();
+                    if(this.state === 'menu') this.audio.startMusic();
+                }, { once: true });
+
+                this.loadData();
+                this.bindInputs();
+                
+                if (!this.playerName) {
+                    document.getElementById('nameModal').classList.add('active');
+                } else {
+                    this.toMenu();
+                }
+
+                requestAnimationFrame((t) => this.loop(t));
+            },
+
+            resize() {
+                this.width = window.innerWidth;
+                this.height = window.innerHeight;
+                this.canvas.width = this.width;
+                this.canvas.height = this.height;
+            },
+
+            bindInputs() {
+                window.addEventListener('keydown', e => this.keys[e.code] = true);
+                window.addEventListener('keyup', e => {
+                    this.keys[e.code] = false;
+                    if (e.code === 'Escape' && this.state === 'playing') this.exitGame();
+                });
+                this.canvas.addEventListener('mousedown', e => {
+                    if (e.button === 0) this.mouse.left = true;
+                    if (e.button === 2) this.mouse.right = true;
+                    this.audio.init(); // Ensure audio init
+                });
+                this.canvas.addEventListener('mouseup', e => {
+                    if (e.button === 0) this.mouse.left = false;
+                    if (e.button === 2) this.mouse.right = false;
+                });
+                this.canvas.addEventListener('mousemove', e => {
+                    const rect = this.canvas.getBoundingClientRect();
+                    this.mouse.x = e.clientX - rect.left;
+                    this.mouse.y = e.clientY - rect.top;
+                });
+                this.canvas.addEventListener('contextmenu', e => e.preventDefault());
+            },
+
+            // --- SAVE/LOAD SYSTEM ---
+            saveData() {
+                const data = {
+                    name: this.playerName,
+                    coins: this.coins,
+                    gems: this.gems,
+                    unlocked: this.unlockedBrawlers,
+                    trophies: this.brawlerTrophies,
+                    targets: this.targetCount
+                };
+                localStorage.setItem('brawlArenaUltra', JSON.stringify(data));
+                this.updateUI();
+            },
+
+            loadData() {
+                const raw = localStorage.getItem('brawlArenaUltra');
+                if (raw) {
+                    const data = JSON.parse(raw);
+                    this.playerName = data.name;
+                    this.coins = data.coins;
+                    this.gems = data.gems;
+                    this.unlockedBrawlers = data.unlocked;
+                    this.brawlerTrophies = data.trophies || {};
+                    this.targetCount = data.targets || 5;
+                }
+                // Ensure Shelly is always unlocked
+                if (!this.unlockedBrawlers.includes('shelly')) this.unlockedBrawlers.push('shelly');
+            },
+
+            promptReset() {
+                if(confirm("Вы уверены? Это удалит весь прогресс!")) {
+                    localStorage.removeItem('brawlArenaUltra');
+                    location.reload();
+                }
+            },
+
+            // --- UI FUNCTIONS ---
+            updateUI() {
+                document.getElementById('coinsVal').textContent = this.coins;
+                document.getElementById('gemsVal').textContent = this.gems;
+                document.getElementById('menuName').textContent = this.playerName;
+                document.getElementById('hudName').textContent = this.playerName;
+
+                // Calc total trophies
+                let total = 0;
+                Object.values(this.brawlerTrophies).forEach(t => total += t);
+                document.getElementById('menuTrophies').textContent = total;
+                document.getElementById('hudTrophies').textContent = total;
+            },
+
+            hideMenus() {
+                document.querySelectorAll('.menu').forEach(el => el.classList.remove('active'));
+                document.querySelectorAll('.modal-overlay').forEach(el => el.classList.remove('active'));
+                document.getElementById('gameHud').classList.remove('active');
+                document.getElementById('currencyDisplay').style.display = 'none';
+            },
+
+            toMenu() {
+                this.hideMenus();
+                this.state = 'menu';
+                document.getElementById('mainMenu').classList.add('active');
+                document.getElementById('currencyDisplay').style.display = 'flex';
+                this.audio.startMusic();
+                this.updateUI();
+            },
+            
+            // --- CHEAT SYSTEM ---
+            openCheatAuth() {
+                this.hideMenus();
+                document.getElementById('cheatAuthMenu').classList.add('active');
+                document.getElementById('cheatPasswordInput').value = '';
+                document.getElementById('cheatError').style.display = 'none';
+            },
+
+            checkCheatPassword() {
+                const pw = document.getElementById('cheatPasswordInput').value;
+                if(pw === 'w1ndy') {
+                    this.openCheatDashboard();
+                } else {
+                    const err = document.getElementById('cheatError');
+                    err.style.display = 'block';
+                    err.textContent = 'ЗАПРЕЩЕНО';
+                }
+            },
+
+            openCheatDashboard() {
+                this.hideMenus();
+                document.getElementById('cheatDashboard').classList.add('active');
+                document.getElementById('cheatCoins').value = this.coins;
+                document.getElementById('cheatGems').value = this.gems;
+                document.getElementById('cheatTrophies').value = this.brawlerTrophies[this.selectedBrawlerId] || 0;
+                
+                // Установить значения чекбоксов (если они есть в localStorage)
+                if(localStorage.getItem('cheatAim') === 'true') {
+                    document.getElementById('cheatAim').checked = true;
+                }
+                if(localStorage.getItem('cheatWallhack') === 'true') {
+                    document.getElementById('cheatWallhack').checked = true;
+                }
+                if(localStorage.getItem('cheatGodMode') === 'true') {
+                    document.getElementById('cheatGodMode').checked = true;
+                }
+            },
+
+            applyCheats() {
+                this.coins = parseInt(document.getElementById('cheatCoins').value) || 0;
+                this.gems = parseInt(document.getElementById('cheatGems').value) || 0;
+                const t = parseInt(document.getElementById('cheatTrophies').value) || 0;
+                
+                this.brawlerTrophies[this.selectedBrawlerId] = t;
+                
+                // Сохранить состояние чекбоксов
+                const aimEnabled = document.getElementById('cheatAim').checked;
+                const wallhackEnabled = document.getElementById('cheatWallhack').checked;
+                const godModeEnabled = document.getElementById('cheatGodMode').checked;
+                
+                localStorage.setItem('cheatAim', aimEnabled);
+                localStorage.setItem('cheatWallhack', wallhackEnabled);
+                localStorage.setItem('cheatGodMode', godModeEnabled);
+                
+                this.saveData();
+                alert("ЧИТЫ АКТИВИРОВАНЫ!");
+                this.toMenu();
+            },
+
+            openBrawlerSelect(mode) {
+                this.mode = mode; // battle or training
+                this.hideMenus();
+                document.getElementById('brawlerSelect').classList.add('active');
+                document.getElementById('currencyDisplay').style.display = 'flex';
+                
+                const grid = document.getElementById('brawlerGrid');
+                grid.innerHTML = '';
+                
+                Object.keys(this.brawlers).forEach(key => {
+                    const b = this.brawlers[key];
+                    const unlocked = this.unlockedBrawlers.includes(key);
+                    const trophies = this.brawlerTrophies[key] || 0;
+                    
+                    const card = document.createElement('div');
+                    card.className = `brawler-card ${unlocked ? '' : 'locked'} ${this.selectedBrawlerId === key ? 'selected' : ''}`;
+                    card.innerHTML = `
+                        <div class="rarity ${b.rarity}">${b.rarityName}</div>
+                        <div class="brawler-icon" style="background:${b.color}">${b.emoji}</div>
+                        <div class="brawler-name">${b.name}</div>
+                        <div class="brawler-stats">HP: ${b.hp}<br>DMG: ${b.damage}</div>
+                        <div style="margin-top:5px; color:#f1c40f; font-weight:bold;">🏆 ${trophies}</div>
+                    `;
+                    
+                    if(unlocked) {
+                        card.onclick = () => {
+                            this.selectedBrawlerId = key;
+                            this.openBrawlerSelect(mode); // Redraw
+                        };
+                    }
+                    grid.appendChild(card);
+                });
+            },
+
+            openShop() {
+                this.hideMenus();
+                document.getElementById('shopMenu').classList.add('active');
+                document.getElementById('currencyDisplay').style.display = 'flex';
+                const grid = document.getElementById('shopGrid');
+                grid.innerHTML = '';
+
+                // Brawlers
+                Object.keys(this.brawlers).forEach(key => {
+                    const b = this.brawlers[key];
+                    if(!this.unlockedBrawlers.includes(key) && b.price > 0) {
+                        const item = document.createElement('div');
+                        item.className = 'shop-item';
+                        item.innerHTML = `
+                            <div class="rarity ${b.rarity}" style="position:relative; width:auto; display:inline-block; margin-bottom:10px; border-radius:4px; padding:2px 6px;">${b.rarityName}</div>
+                            <div class="brawler-icon" style="background:${b.color}">${b.emoji}</div>
+                            <h3>${b.name}</h3>
+                            <button class="btn btn-green" onclick="game.buyBrawler('${key}')">${b.price} 💰</button>
+                        `;
+                        grid.appendChild(item);
+                    }
+                });
+
+                // Boxes
+                const boxes = [
+                    { name: "Малый ящик", type: "small", price: 100, costType: "coins", desc: "10-25 монет, 0-3 кристалла, Шанс на бойца!" },
+                    { name: "Большой ящик", type: "big", price: 250, costType: "coins", desc: "30-60 монет, 0-30 кристаллов, Шанс на бойца!" },
+                    { name: "Мега ящик", type: "mega", price: 30, costType: "gems", desc: "100-200 монет, 0-50 кристаллов, Высокий шанс на бойца!" }
+                ];
+
+                boxes.forEach(box => {
+                    const item = document.createElement('div');
+                    item.className = 'shop-item';
+                    const icon = box.costType === 'coins' ? '💰' : '💎';
+                    item.innerHTML = `
+                        <div class="info-btn" onclick="game.showInfo('${box.desc}')">🛈</div>
+                        <div style="font-size:40px;">📦</div>
+                        <h3>${box.name}</h3>
+                        <button class="btn" onclick="game.buyBox('${box.type}', ${box.price}, '${box.costType}')">${box.price} ${icon}</button>
+                    `;
+                    grid.appendChild(item);
+                });
+            },
+
+            showInfo(text) {
+                document.getElementById('infoText').textContent = text;
+                document.getElementById('infoModal').classList.add('active');
+            },
+
+            buyBrawler(id) {
+                const b = this.brawlers[id];
+                if(this.coins >= b.price) {
+                    this.coins -= b.price;
+                    this.unlockedBrawlers.push(id);
+                    this.saveData();
+                    this.audio.playCollect();
+                    alert(`ВЫ РАЗБЛОКИРОВАЛИ: ${b.name}!`);
+                    this.openShop();
+                } else {
+                    alert("Недостаточно монет!");
+                }
+            },
+
+            buyBox(type, price, currency) {
+                if(currency === 'coins' && this.coins < price) { alert("Мало монет!"); return; }
+                if(currency === 'gems' && this.gems < price) { alert("Мало кристаллов!"); return; }
+
+                if(currency === 'coins') this.coins -= price;
+                if(currency === 'gems') this.gems -= price;
+
+                this.audio.playCollect();
+
+                let cReward = 0, gReward = 0;
+                let brawlerChance = 0;
+                
+                // Rewards logic
+                if(type === 'small') {
+                    cReward = Math.floor(Math.random() * 16) + 10;
+                    gReward = Math.floor(Math.random() * 4);
+                    brawlerChance = 0.05; // 5%
+                } else if(type === 'big') {
+                    cReward = Math.floor(Math.random() * 31) + 30;
+                    gReward = Math.floor(Math.random() * 31);
+                    brawlerChance = 0.15; // 15%
+                } else if(type === 'mega') {
+                    cReward = Math.floor(Math.random() * 101) + 100;
+                    gReward = Math.floor(Math.random() * 51);
+                    brawlerChance = 0.40; // 40%
+                }
+
+                this.coins += cReward;
+                this.gems += gReward;
+                
+                let msg = `ОТКРЫТО!\n💰 +${cReward}\n💎 +${gReward}`;
+
+                // Try to unlock brawler
+                if(Math.random() < brawlerChance) {
+                    const locked = Object.keys(this.brawlers).filter(k => !this.unlockedBrawlers.includes(k));
+                    if(locked.length > 0) {
+                        const newBrawlerId = locked[Math.floor(Math.random() * locked.length)];
+                        this.unlockedBrawlers.push(newBrawlerId);
+                        const bName = this.brawlers[newBrawlerId].name;
+                        const bRarity = this.brawlers[newBrawlerId].rarityName;
+                        msg += `\n\n✨ НОВЫЙ БОЕЦ! ✨\n${bName} (${bRarity})`;
+                        this.audio.playUltra();
+                    }
+                }
+
+                this.saveData();
+                alert(msg);
+                this.openShop();
+            },
+
+            openSettings() { this.hideMenus(); document.getElementById('settingsMenu').classList.add('active'); },
+            openHelp() { this.hideMenus(); document.getElementById('helpMenu').classList.add('active'); },
+            openTargetsSettings() { this.hideMenus(); document.getElementById('targetSettings').classList.add('active'); document.getElementById('targetCountInput').value = this.targetCount; },
+            saveTargetSettings() { this.targetCount = parseInt(document.getElementById('targetCountInput').value); this.saveData(); this.openSettings(); },
+            openChangeNick() { this.hideMenus(); document.getElementById('nickSettings').classList.add('active'); },
+            saveNewNick() { 
+                const n = document.getElementById('newNickInput').value; 
+                if(n) { this.playerName = n; this.saveData(); this.openSettings(); } 
+            },
+            setName() {
+                const n = document.getElementById('nameInput').value;
+                if(n) { this.playerName = n; this.saveData(); document.getElementById('nameModal').classList.remove('active'); this.toMenu(); }
+            },
+
+            // --- GAMEPLAY SYSTEM ---
+
+            startGame() {
+                this.hideMenus();
+                this.audio.stopMusic(); // Stop menu music
+                this.state = 'playing';
+                this.canvas.style.display = 'block';
+                document.getElementById('gameHud').classList.add('active');
+                
+                // Reset entities
+                this.bullets = [];
+                this.particles = [];
+                this.walls = [];
+                this.boxes = [];
+                this.targets = [];
+                this.enemies = [];
+                this.turrets = [];
+                this.zones = [];
+
+                // Generate Map
+                this.generateMap();
+
+                // Spawn Player
+                const startPos = this.getSafeSpawn();
+                const bStats = this.brawlers[this.selectedBrawlerId];
+                
+                this.player = {
+                    x: startPos.x, y: startPos.y,
+                    radius: 24,
+                    id: this.selectedBrawlerId,
+                    stats: bStats,
+                    hp: bStats.hp,
+                    maxHp: bStats.hp,
+                    angle: 0,
+                    reloadTimer: 0,
+                    ultraCharge: 0,
+                    
+                    // Buffs/States
+                    invisibleTime: 0,
+                    speedBuffTime: 0,
+                    dashing: false,
+                    dashDest: null,
+                    dashSpeed: 0,
+                    burstQueue: [], // For multi-shot attacks
+                    
+                    // Stats
+                    coinsCollected: 0,
+                    isDead: false
+                };
+
+                // Spawn Enemies (Battle Mode)
+                if(this.mode === 'battle') {
+                    // 9 Bots + 1 Player = 10
+                    const botTypes = Object.keys(this.brawlers);
+                    for(let i=0; i<9; i++) {
+                        const pos = this.getSafeSpawn();
+                        const type = botTypes[Math.floor(Math.random() * botTypes.length)];
+                        const bData = this.brawlers[type];
+                        this.enemies.push({
+                            x: pos.x, y: pos.y,
+                            radius: 24,
+                            id: type,
+                            stats: bData,
+                            hp: bData.hp,
+                            maxHp: bData.hp,
+                            angle: Math.random() * Math.PI * 2,
+                            reloadTimer: 0,
+                            burstQueue: [],
+                            
+                            // AI State
+                            state: 'wander', // wander, chase, flee, dodge
+                            target: null,
+                            moveTarget: {x: pos.x, y: pos.y},
+                            reactionTimer: 0,
+                            strafeDir: 1
+                        });
+                    }
+                } else {
+                    // Training Mode
+                    for(let i=0; i<this.targetCount; i++) {
+                        const pos = this.getSafeSpawn();
+                        this.targets.push({ x: pos.x, y: pos.y, radius: 20, hp: 4000, maxHp: 4000 });
+                    }
+                }
+            },
+
+            generateMap() {
+                // Outer Walls
+                this.walls.push({x: -50, y: -50, w: this.worldWidth+100, h: 50, color: '#444'}); // Top
+                this.walls.push({x: -50, y: this.worldHeight, w: this.worldWidth+100, h: 50, color: '#444'}); // Bottom
+                this.walls.push({x: -50, y: 0, w: 50, h: this.worldHeight, color: '#444'}); // Left
+                this.walls.push({x: this.worldWidth, y: 0, w: 50, h: this.worldHeight, color: '#444'}); // Right
+
+                // Random Obstacles (Blocks) - Avoid center spawn area initially
+                for(let i=0; i<35; i++) {
+                    const w = Math.random() * 100 + 60;
+                    const h = Math.random() * 100 + 60;
+                    const x = Math.random() * (this.worldWidth - w - 200) + 100;
+                    const y = Math.random() * (this.worldHeight - h - 200) + 100;
+                    this.walls.push({x, y, w, h, color: '#5d4037'}); // Wood/Block color
+                }
+
+                // Boxes
+                for(let i=0; i<(this.mode === 'battle' ? 15 : 5); i++) {
+                    const pos = this.getSafeSpawn();
+                    this.boxes.push({x: pos.x, y: pos.y, w: 50, h: 50, hp: 6000, maxHp: 6000});
+                }
+            },
+
+            getSafeSpawn() {
+                let safe = false;
+                let x, y;
+                let attempts = 0;
+                while(!safe && attempts < 500) {
+                    x = Math.random() * (this.worldWidth - 200) + 100;
+                    y = Math.random() * (this.worldHeight - 200) + 100;
+                    
+                    // Check distance from other spawns (simple check)
+                    safe = true;
+                    // Check wall collisions
+                    for(let w of this.walls) {
+                        if(x + 30 > w.x && x - 30 < w.x + w.w && y + 30 > w.y && y - 30 < w.y + w.h) {
+                            safe = false; break;
+                        }
+                    }
+                    if(safe && this.player) {
+                        const dist = Math.hypot(x - this.player.x, y - this.player.y);
+                        if(dist < 400) safe = false; // Don't spawn on top of player
+                    }
+                    attempts++;
+                }
+                return {x, y};
+            },
+
+            // --- GAME LOOP ---
+            loop(timestamp) {
+                if(this.state !== 'playing') {
+                    requestAnimationFrame(t => this.loop(t));
+                    return;
+                }
+                const dt = timestamp - this.lastTime;
+                this.lastTime = timestamp;
+
+                this.update(dt);
+                this.draw();
+                requestAnimationFrame(t => this.loop(t));
+            },
+
+            update(dt) {
+                if(this.player.isDead) return;
+
+                // REGEN: +500 HP per second (0.5 per ms)
+                // Apply to player and bots in battle
+                const regenAmount = 0.5 * dt;
+                
+                if (this.player.hp < this.player.maxHp) {
+                    this.player.hp = Math.min(this.player.maxHp, this.player.hp + regenAmount);
+                }
+                
+                if (this.mode === 'battle') {
+                    this.enemies.forEach(e => {
+                        if (e.hp < e.maxHp) e.hp = Math.min(e.maxHp, e.hp + regenAmount);
+                    });
+                }
+
+                // 1. Player Movement & Input
+                this.handlePlayerMovement();
+                this.handlePlayerAction(dt);
+                
+                // 2. Camera
+                this.camera.x = this.player.x - this.width/2;
+                this.camera.y = this.player.y - this.height/2;
+                // Clamp camera
+                this.camera.x = Math.max(0, Math.min(this.camera.x, this.worldWidth - this.width));
+                this.camera.y = Math.max(0, Math.min(this.camera.y, this.worldHeight - this.height));
+
+                // 3. AI Update
+                this.enemies.forEach(bot => this.updateBot(bot, dt));
+
+                // 4. Projectiles
+                this.updateBullets(dt);
+                
+                // 5. Turrets & Zones
+                this.updateTurrets(dt);
+                this.updateZones(dt);
+
+                // 6. Particles
+                for(let i=this.particles.length-1; i>=0; i--) {
+                    const p = this.particles[i];
+                    p.life -= dt;
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    if(p.life <= 0) this.particles.splice(i, 1);
+                }
+
+                // 7. Check Win/Loss
+                if(this.mode === 'battle' && this.enemies.length === 0) {
+                    this.endGame(true, 1);
+                }
+            },
+
+            // --- PLAYER LOGIC ---
+            handlePlayerMovement() {
+                if(this.player.dashing) {
+                    // Logic for Darryl Roll / Edgar Jump
+                    const dx = this.player.dashDest.x - this.player.x;
+                    const dy = this.player.dashDest.y - this.player.y;
+                    const dist = Math.hypot(dx, dy);
+                    if(dist < 20) {
+                        this.player.dashing = false;
+                        if(this.player.id === 'edgar') this.player.speedBuffTime = 3000; // Edgar Speed after jump
+                    } else {
+                        const move = Math.min(dist, this.player.dashSpeed);
+                        this.player.x += (dx/dist) * move;
+                        this.player.y += (dy/dist) * move;
+                        
+                        // Darryl Damage on Roll
+                        if(this.player.id === 'darryl') {
+                            this.enemies.forEach(e => {
+                                if(Math.hypot(e.x - this.player.x, e.y - this.player.y) < 40) {
+                                    this.damageEntity(e, 800, 'darryl_roll');
+                                }
+                            });
+                        }
+                    }
+                    return; // No normal movement while dashing
+                }
+
+                let dx = 0, dy = 0;
+                if(this.keys['KeyW']) dy = -1;
+                if(this.keys['KeyS']) dy = 1;
+                if(this.keys['KeyA']) dx = -1;
+                if(this.keys['KeyD']) dx = 1;
+
+                if(dx !== 0 || dy !== 0) {
+                    const len = Math.hypot(dx, dy);
+                    let spd = this.player.stats.speed;
+                    if(this.player.speedBuffTime > 0) spd *= 1.4; // Edgar/Buffs
+                    if(this.player.invisibleTime > 0) spd *= 1.2; // Leon speed
+                    
+                    // Slow effect from Spike zone
+                    if(this.inSlowZone(this.player)) spd *= 0.5;
+
+                    dx = (dx / len) * spd;
+                    dy = (dy / len) * spd;
+                    
+                    // Collision
+                    if(!this.checkWall(this.player.x + dx, this.player.y)) this.player.x += dx;
+                    if(!this.checkWall(this.player.x, this.player.y + dy)) this.player.y += dy;
+                }
+
+                // Cooldowns
+                if(this.player.speedBuffTime > 0) this.player.speedBuffTime -= 16;
+                if(this.player.invisibleTime > 0) this.player.invisibleTime -= 16;
+            },
+
+            handlePlayerAction(dt) {
+                // Mouse Angle
+                const mx = this.mouse.x + this.camera.x;
+                const my = this.mouse.y + this.camera.y;
+                this.player.angle = Math.atan2(my - this.player.y, mx - this.player.x);
+
+                // АИМ ЧИТ: если включен, автоматически наводится на ближайшего врага
+                if(localStorage.getItem('cheatAim') === 'true' && this.enemies.length > 0) {
+                    let closestEnemy = null;
+                    let minDist = Infinity;
+                    
+                    for(let enemy of this.enemies) {
+                        const dist = Math.hypot(enemy.x - this.player.x, enemy.y - this.player.y);
+                        if(dist < minDist && dist < 600) { // Наводится на врагов в радиусе 600px
+                            minDist = dist;
+                            closestEnemy = enemy;
+                        }
+                    }
+                    
+                    if(closestEnemy) {
+                        this.player.angle = Math.atan2(closestEnemy.y - this.player.y, closestEnemy.x - this.player.x);
+                    }
+                }
+
+                if(this.player.reloadTimer > 0) this.player.reloadTimer -= dt;
+
+                // Process Burst Queue (for multi-shot attacks)
+                if(this.player.burstQueue.length > 0) {
+                    const nextShot = this.player.burstQueue[0];
+                    if(Date.now() >= nextShot.time) {
+                        this.fireProjectile(this.player, nextShot.angle, nextShot.isUltra);
+                        this.player.burstQueue.shift();
+                    }
+                }
+
+                // Attack
+                if(this.mouse.left && this.player.reloadTimer <= 0 && !this.player.dashing) {
+                    this.startAttack(this.player, false);
+                }
+
+                // Ultra
+                if(this.mouse.right && this.player.ultraCharge >= 100 && !this.player.dashing) {
+                    this.startAttack(this.player, true);
+                    this.player.ultraCharge = 0;
+                }
+
+                // Update HUD
+                const hudHp = document.getElementById('hudHpBar');
+                hudHp.style.width = (this.player.hp / this.player.maxHp * 100) + '%';
+                
+                const hudAmmo = document.getElementById('hudAmmoBar');
+                if(this.player.reloadTimer <= 0) hudAmmo.style.width = '100%';
+                else hudAmmo.style.width = (1 - (this.player.reloadTimer / this.player.stats.reload)) * 100 + '%';
+
+                const ultraBtn = document.getElementById('ultraBtn');
+                if(this.player.ultraCharge >= 100) ultraBtn.classList.add('ready');
+                else ultraBtn.classList.remove('ready');
+
+                document.getElementById('hudEnemies').textContent = this.enemies.length;
+            },
+
+            // --- COMBAT SYSTEM ---
+            startAttack(entity, isUltra) {
+                const stats = entity.stats;
+                
+                // Sound Effect
+                if(entity === this.player) {
+                    if(isUltra) this.audio.playUltra();
+                    else this.audio.playShoot();
+                }
+
+                if(isUltra) {
+                    // ULTRA LOGIC
+                    switch(stats.ultra.type) {
+                        case 'super_shotgun': // Shelly
+                        case 'linear_burst_super': // Colt
+                            // Queue projectiles
+                            let count = stats.ultra.projectiles;
+                            for(let i=0; i<count; i++) {
+                                let timeOffset = (stats.ultra.type === 'linear_burst_super') ? i * 150 : 0; // Colt delay vs Shelly instant
+                                entity.burstQueue.push({ time: Date.now() + timeOffset, angle: entity.angle, isUltra: true });
+                            }
+                            break;
+                        case 'jump_slam': // El Primo
+                        case 'poison_jump': // Byron
+                        case 'speed_jump': // Edgar
+                            // Jump Logic
+                            const jumpDist = 300;
+                            entity.dashing = true;
+                            entity.dashSpeed = 15;
+                            entity.dashDest = {
+                                x: entity.x + Math.cos(entity.angle) * jumpDist,
+                                y: entity.y + Math.sin(entity.angle) * jumpDist
+                            };
+                            
+                            // Byron Start Daggers
+                            if(stats.ultra.type === 'poison_jump') {
+                                this.fireRadial(entity, 14, 640, true); // 14 daggers
+                            }
+                            break;
+                        case 'turret_spawn': // Penny
+                            this.turrets.push({
+                                x: entity.x, y: entity.y, hp: 6400, maxHp: 6400,
+                                reload: 3300, timer: 3300, owner: entity
+                            });
+                            break;
+                        case 'roll': // Darryl
+                            entity.dashing = true;
+                            // Reduced Speed and Distance Significantly
+                            entity.dashSpeed = 8; // SLOWER (was 12/20)
+                            // Distance calc: 250px (was 300/500)
+                            entity.dashDest = { x: entity.x + Math.cos(entity.angle)*250, y: entity.y + Math.sin(entity.angle)*250 };
+                            break;
+                        case 'slow_zone': // Spike
+                            // NEW: Spawn exactly at mouse cursor (if player) or target (if bot)
+                            let tx, ty;
+                            if(entity === this.player) {
+                                tx = this.mouse.x + this.camera.x;
+                                ty = this.mouse.y + this.camera.y;
+                            } else if (entity.target) {
+                                tx = entity.target.x;
+                                ty = entity.target.y;
+                            } else {
+                                tx = entity.x + Math.cos(entity.angle)*300;
+                                ty = entity.y + Math.sin(entity.angle)*300;
+                            }
+
+                            // Throw grenade that lands at specific spot
+                            this.bullets.push({
+                                x: entity.x, y: entity.y, 
+                                destX: tx, destY: ty,
+                                life: 1000, // Flight time approx
+                                type: 'spike_super_proj', owner: entity, 
+                                radius: 8, color: '#00b894'
+                            });
+                            break;
+                        case 'invisibility': // Leon
+                            entity.invisibleTime = 6000;
+                            break;
+                    }
+
+                } else {
+                    // BASIC ATTACK
+                    entity.reloadTimer = stats.reload;
+                    entity.invisibleTime = 0; // Break stealth
+
+                    // Specific handling based on type
+                    if(stats.type === 'shotgun' || stats.type === 'double_shotgun' || stats.type === 'shuriken_fan') {
+                        // Instant spread
+                        const count = stats.projectiles;
+                        const spread = stats.spread || 0.2;
+                        for(let i=0; i<count; i++) {
+                            const offset = (Math.random() - 0.5) * spread;
+                            this.fireProjectile(entity, entity.angle + offset, false);
+                        }
+                    } else if (stats.type === 'linear_burst' || stats.type === 'punch_burst' || stats.type === 'heal_punch') {
+                        // Queued shots (Colt, El Primo, Edgar)
+                        const count = stats.projectiles;
+                        const delay = 100; // ms between shots
+                        for(let i=0; i<count; i++) {
+                            entity.burstQueue.push({ time: Date.now() + (i*delay), angle: entity.angle, isUltra: false });
+                        }
+                    } else if (stats.type === 'poison_dart') {
+                         const count = stats.projectiles;
+                         for(let i=0; i<count; i++) {
+                            const offset = (i - 1) * 0.1; // -0.1, 0, 0.1
+                            this.fireProjectile(entity, entity.angle + offset, false);
+                         }
+                    } else {
+                        // Single shot (Penny, Spike)
+                        this.fireProjectile(entity, entity.angle, false);
+                    }
+                }
+            },
+
+            fireProjectile(entity, angle, isUltra) {
+                let dmg = isUltra ? entity.stats.ultra.damage : entity.stats.damage;
+                let rng = isUltra && entity.stats.ultra.range ? entity.stats.ultra.range : entity.stats.range;
+                let spd = 12;
+                let type = 'normal';
+                let rad = 6;
+                let color = '#fff';
+
+                // Customize based on Brawler
+                if(entity.stats.name === 'Пенни') {
+                    type = 'bag'; rad = 10; color = '#e84393';
+                } else if(entity.stats.name === 'Спайк') {
+                    type = 'cactus'; rad = 10; color = '#00b894';
+                } else if(entity.stats.name === 'Байрон') {
+                    type = 'poison'; color = '#a29bfe';
+                } else if(entity.stats.name === 'Эдгар') {
+                    type = 'lifesteal'; // for logic
+                }
+
+                // If Ultra overrides
+                if(isUltra && entity.stats.ultra.type === 'super_shotgun') { spd = 15; color = '#ff0000'; }
+
+                this.bullets.push({
+                    x: entity.x, y: entity.y,
+                    vx: Math.cos(angle) * spd,
+                    vy: Math.sin(angle) * spd,
+                    owner: entity, // Reference to shooter
+                    damage: dmg,
+                    life: rng / spd * 16.6, // frames
+                    type: type,
+                    isUltra: isUltra,
+                    radius: rad,
+                    color: color
+                });
+            },
+
+            fireRadial(entity, count, damage, isPoison) {
+                for(let i=0; i<count; i++) {
+                    const a = (Math.PI * 2 / count) * i;
+                    this.bullets.push({
+                        x: entity.x, y: entity.y,
+                        vx: Math.cos(a) * 10, vy: Math.sin(a) * 10,
+                        owner: entity, damage: damage, life: 40,
+                        type: isPoison ? 'poison' : 'normal',
+                        radius: 6, color: '#a29bfe'
+                    });
+                }
+            },
+
+            updateBullets(dt) {
+                for(let i=this.bullets.length-1; i>=0; i--) {
+                    const b = this.bullets[i];
+                    
+                    // Special Movement for Spike Super Projectile
+                    if(b.type === 'spike_super_proj') {
+                        // Move towards dest
+                        const dx = b.destX - b.x;
+                        const dy = b.destY - b.y;
+                        const dist = Math.hypot(dx, dy);
+                        if(dist < 10) {
+                            // Landed
+                            this.zones.push({
+                                x: b.x, y: b.y, radius: 100, life: 4500,
+                                damage: 800, owner: b.owner, type: 'spike', color: 'rgba(0, 184, 148, 0.4)'
+                            });
+                            this.bullets.splice(i, 1);
+                            continue;
+                        } else {
+                            // Move fast
+                            const speed = 15;
+                            b.x += (dx/dist)*speed;
+                            b.y += (dy/dist)*speed;
+                        }
+                        continue;
+                    }
+                    
+                    // Special Logic for Cannonball (Penny Turret)
+                    if(b.type === 'cannonball') {
+                         const dx = b.destX - b.x;
+                         const dy = b.destY - b.y;
+                         const dist = Math.hypot(dx, dy);
+                         
+                         if(dist < 10) {
+                             // Reached Destination
+                             // Check for direct hit (3000 dmg)
+                             let hit = false;
+                             const potential = [...this.enemies, this.player].filter(e => e !== b.owner.owner);
+                             for(let e of potential) {
+                                 if(Math.hypot(e.x - b.x, e.y - b.y) < 30) {
+                                     this.damageEntity(e, 3000, 'cannon', b.owner.owner);
+                                     hit = true;
+                                 }
+                             }
+                             
+                             if(hit) {
+                                 this.createParticles(b.x, b.y, '#000', 10);
+                             } else {
+                                 // Become a mine (2000 dmg, 3s duration)
+                                 this.bullets.push({
+                                     x: b.x, y: b.y,
+                                     vx: 0, vy: 0,
+                                     life: 3000/16.6, // frames
+                                     damage: 2000,
+                                     type: 'cannonball_mine',
+                                     owner: b.owner.owner, // Mine owned by Player/Bot
+                                     radius: 10, color: '#000'
+                                 });
+                             }
+                             this.bullets.splice(i, 1);
+                             continue;
+                         } else {
+                             const speed = 12;
+                             b.x += (dx/dist)*speed;
+                             b.y += (dy/dist)*speed;
+                             continue;
+                         }
+                    }
+
+                    // Normal Bullet Movement
+                    b.x += b.vx;
+                    b.y += b.vy;
+                    b.life -= dt;
+
+                    // Wall Collision
+                    if(this.checkWall(b.x, b.y)) {
+                        this.handleBulletDeath(b);
+                        this.bullets.splice(i, 1);
+                        continue;
+                    }
+
+                    // Entity Collision
+                    let hit = false;
+                    
+                    // Mine Collision Logic (Cannonball Mine)
+                    if(b.type === 'cannonball_mine') {
+                        // Check if anyone steps on it
+                        const potential = [...this.enemies, this.player].filter(e => e !== b.owner);
+                        for(let e of potential) {
+                             if(Math.hypot(e.x - b.x, e.y - b.y) < 20) {
+                                 this.damageEntity(e, b.damage, 'mine', b.owner);
+                                 hit = true;
+                                 break;
+                             }
+                        }
+                        if(hit) {
+                            this.createParticles(b.x, b.y, '#ff4757', 8);
+                            this.bullets.splice(i, 1);
+                        }
+                        // Don't do normal collision or movement
+                        continue;
+                    }
+
+                    // --- CHANGED LOGIC FOR FFA ---
+                    // If owner is player, hit enemies
+                    if(b.owner === this.player) {
+                        for(let e of this.enemies) {
+                            if(this.checkHit(b, e)) {
+                                this.damageEntity(e, b.damage, b.type, b.owner);
+                                hit = true; break;
+                            }
+                        }
+                    } else {
+                        // If owner is enemy
+                        // Hit Player
+                        if(this.checkHit(b, this.player)) {
+                             this.damageEntity(this.player, b.damage, b.type, b.owner);
+                             hit = true;
+                        }
+                        // Hit OTHER enemies (bot vs bot)
+                        if(!hit) {
+                            for(let e of this.enemies) {
+                                if(b.owner !== e && this.checkHit(b, e)) {
+                                    this.damageEntity(e, b.damage, b.type, b.owner);
+                                    hit = true; break;
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Turrets hit everyone except owner
+                    if(b.owner.type === 'turret') {
+                         if(b.owner.owner !== this.player && this.checkHit(b, this.player)) {
+                             this.damageEntity(this.player, b.damage, b.type, b.owner.owner); hit = true;
+                         }
+                         for(let e of this.enemies) {
+                             if(b.owner.owner !== e && this.checkHit(b, e)) {
+                                 this.damageEntity(e, b.damage, b.type, b.owner.owner); hit = true; break;
+                             }
+                         }
+                    }
+                    
+                    // Targets in Training
+                    if(!hit) {
+                        for(let t of this.targets) {
+                            if(this.checkHit(b, t)) {
+                                this.damageEntity(t, b.damage, b.type, b.owner); // Using main damage logic
+                                hit = true; break;
+                            }
+                        }
+                    }
+                    
+                    // Box Collision
+                    if(!hit) {
+                        for(let box of this.boxes) {
+                             if(b.x > box.x && b.x < box.x+box.w && b.y > box.y && b.y < box.y+box.h) {
+                                box.hp -= b.damage;
+                                this.createParticles(b.x, b.y, '#8e44ad', 3);
+                                hit = true;
+                                if(box.hp <= 0) {
+                                    this.boxes.splice(this.boxes.indexOf(box), 1);
+                                    if(b.owner === this.player) this.coins += 20;
+                                }
+                                break;
+                             }
+                        }
+                    }
+
+                    if(hit || b.life <= 0) {
+                        this.handleBulletDeath(b);
+                        this.bullets.splice(i, 1);
+                    }
+                }
+            },
+
+            handleBulletDeath(b) {
+                this.createParticles(b.x, b.y, b.color, 5);
+                
+                // Penny Bag Splash
+                if(b.type === 'bag') {
+                    // Explode into 4 coins backwards
+                    const baseAngle = Math.atan2(-b.vy, -b.vx);
+                    for(let i=0; i<4; i++) {
+                        const a = baseAngle + (Math.random()-0.5);
+                        this.bullets.push({
+                            x: b.x, y: b.y,
+                            vx: Math.cos(a)*10, vy: Math.sin(a)*10,
+                            owner: b.owner, damage: 1400, life: 30,
+                            type: 'normal', radius: 4, color: 'gold'
+                        });
+                    }
+                }
+                
+                // Spike Cactus Split
+                if(b.type === 'cactus') {
+                    for(let i=0; i<6; i++) {
+                        const a = (Math.PI*2/6)*i;
+                        this.bullets.push({
+                            x: b.x, y: b.y,
+                            vx: Math.cos(a)*10, vy: Math.sin(a)*10,
+                            owner: b.owner, damage: 1080, life: 50, // INCREASED RANGE (was 25)
+                            type: 'normal', radius: 4, color: '#00b894'
+                        });
+                    }
+                }
+            },
+
+            damageEntity(ent, amount, type, source) {
+                // ЧИТ БЕСКОНЕЧНОЕ ЗДОРОВЬЕ: если включен, игрок не получает урон
+                if(ent === this.player && localStorage.getItem('cheatGodMode') === 'true') {
+                    return;
+                }
+                
+                ent.hp -= amount;
+                if(source === this.player) this.audio.playHit();
+                
+                this.createFloatingText(ent.x, ent.y - 30, Math.floor(amount), '#fff');
+                this.createParticles(ent.x, ent.y, '#ff0000', 5);
+
+                // Lifesteal (Edgar)
+                if(type === 'lifesteal' && source) {
+                    source.hp = Math.min(source.maxHp, source.hp + 480);
+                    this.createFloatingText(source.x, source.y - 40, "+480", "#00ff00");
+                }
+
+                // Poison (Byron)
+                if(type === 'poison') {
+                    // Simplified DoT: 4 ticks of 160
+                    let ticks = 0;
+                    const iv = setInterval(() => {
+                        if(ent.hp > 0 && ticks < 4) {
+                            ent.hp -= 160;
+                            this.createFloatingText(ent.x, ent.y - 30, "160", "#a29bfe");
+                            if(ent.hp <= 0) this.killEntity(ent);
+                            ticks++;
+                        } else clearInterval(iv);
+                    }, 1000);
+                }
+
+                // Ultra Charge (5% per 150 damage -> 3.33% per 100)
+                if(source && (source === this.player)) {
+                    this.player.ultraCharge += (amount / 150) * 5;
+                    if(this.player.ultraCharge > 100) this.player.ultraCharge = 100;
+                }
+
+                if(ent.hp <= 0) this.killEntity(ent);
+            },
+
+            killEntity(ent) {
+                if(ent === this.player && !this.player.isDead) {
+                    this.player.isDead = true;
+                    this.audio.playDie();
+                    // Rank calc
+                    const rank = this.enemies.length + 1;
+                    this.endGame(false, rank);
+                } else if (this.enemies.includes(ent)) {
+                    this.enemies.splice(this.enemies.indexOf(ent), 1);
+                    this.coins += 20; // Kill reward (even if bot killed bot, player gets coins, simplifying)
+                } else if (this.targets.includes(ent)) {
+                    this.targets.splice(this.targets.indexOf(ent), 1);
+                    this.coins += 5;
+                }
+            },
+
+            updateTurrets(dt) {
+                for(let i=this.turrets.length-1; i>=0; i--) {
+                    const t = this.turrets[i];
+                    t.timer -= dt;
+                    if(t.timer <= 0) {
+                        t.timer = t.reload;
+                        // Find nearest target (that is not owner)
+                        let target = null;
+                        let minD = 9999;
+                        
+                        // All possible targets
+                        const potential = [...this.enemies, this.player].filter(e => e !== t.owner && !e.isDead && e.invisibleTime <= 0);
+                        
+                        potential.forEach(p => {
+                            const d = Math.hypot(p.x - t.x, p.y - t.y);
+                            if(d < 800 && d < minD) { minD = d; target = p; }
+                        });
+
+                        if(target) {
+                            // Cannonball logic (Penny Ultra)
+                            // Lobbed shot: target current position + random
+                            const destX = target.x + (Math.random()-0.5)*50;
+                            const destY = target.y + (Math.random()-0.5)*50;
+                            
+                            // Shoot ACTUAL projectile that lands
+                            this.bullets.push({
+                                x: t.x, y: t.y, 
+                                destX: destX, destY: destY,
+                                life: 9999, // until lands
+                                type: 'cannonball', owner: t, 
+                                radius: 8, color:'#000', damage: 3000
+                            });
+                        }
+                    }
+                    // Draw Turret (More detailed)
+                    this.ctx.fillStyle = '#e58e26'; // Wood base
+                    this.ctx.fillRect(t.x-20 - this.camera.x, t.y-20 - this.camera.y, 40, 40);
+                    this.ctx.strokeStyle = '#2d3436';
+                    this.ctx.lineWidth = 3;
+                    this.ctx.strokeRect(t.x-20 - this.camera.x, t.y-20 - this.camera.y, 40, 40);
+                    
+                    // Draw Barrel
+                    this.ctx.fillStyle = '#2d3436'; // Dark barrel
+                    this.ctx.beginPath();
+                    this.ctx.arc(t.x - this.camera.x, t.y - this.camera.y, 15, 0, Math.PI*2);
+                    this.ctx.fill();
+                    
+                    // Turret Label
+                    this.ctx.fillStyle = 'white';
+                    this.ctx.font = '10px Arial';
+                    this.ctx.fillText("TURRET", t.x - 20 - this.camera.x, t.y - 25 - this.camera.y);
+                }
+            },
+
+            updateZones(dt) {
+                for(let i=this.zones.length-1; i>=0; i--) {
+                    const z = this.zones[i];
+                    z.life -= dt;
+                    // Logic handled in update (slow) or damage tick
+                    if(z.life % 1000 < dt) { // approx 1 sec tick
+                         // Hit everyone except owner
+                         const entities = [...this.enemies, this.player].filter(e => e !== z.owner);
+                         entities.forEach(e => {
+                             if(Math.hypot(e.x - z.x, e.y - z.y) < z.radius) {
+                                 this.damageEntity(e, z.damage, 'zone', z.owner);
+                             }
+                         });
+                    }
+                    if(z.life <= 0) this.zones.splice(i, 1);
+                }
+            },
+
+            inSlowZone(ent) {
+                return this.zones.some(z => z.type === 'spike' && Math.hypot(ent.x - z.x, ent.y - z.y) < z.radius);
+            },
+
+            // --- AI SYSTEM (SMARTER - FFA) ---
+            updateBot(bot, dt) {
+                // Byron Jump landing logic
+                if(bot.dashing) {
+                    const dx = bot.dashDest.x - bot.x;
+                    const dy = bot.dashDest.y - bot.y;
+                    const dist = Math.hypot(dx, dy);
+                    if(dist < 20) {
+                        bot.dashing = false;
+                        if(bot.id === 'byron') this.fireRadial(bot, 14, 640, true);
+                        if(bot.id === 'elpremo') {
+                            // Impact damage check
+                            const potential = [this.player, ...this.enemies].filter(e => e !== bot);
+                            potential.forEach(p => {
+                                if(Math.hypot(p.x - bot.x, p.y - bot.y) < 60) this.damageEntity(p, 800, 'slam', bot);
+                            });
+                        }
+                    } else {
+                        const move = Math.min(dist, bot.dashSpeed);
+                        bot.x += (dx/dist)*move; bot.y += (dy/dist)*move;
+                    }
+                    return; 
+                }
+
+                // AI State Machine
+                // Find nearest entity that is NOT self
+                const candidates = [this.player, ...this.enemies].filter(e => e !== bot && !e.isDead && e.invisibleTime <= 0);
+                
+                let target = null;
+                let minDist = 9999;
+                
+                candidates.forEach(c => {
+                    const d = Math.hypot(c.x - bot.x, c.y - bot.y);
+                    if(d < minDist) { minDist = d; target = c; }
+                });
+
+                // Basic Decision Making
+                if(target && minDist < 1500) {
+                    bot.target = target;
+                    bot.angle = Math.atan2(target.y - bot.y, target.x - bot.x);
+
+                    // Movement Logic (Steering)
+                    let ax = 0, ay = 0;
+                    
+                    // 1. Seek Target (but keep range)
+                    const desiredDist = bot.stats.range * 0.7;
+                    if(minDist > desiredDist) {
+                        ax += Math.cos(bot.angle); ay += Math.sin(bot.angle);
+                    } else if (minDist < desiredDist * 0.5) {
+                        // Flee if too close (kiting)
+                        ax -= Math.cos(bot.angle); ay -= Math.sin(bot.angle);
+                    } else {
+                        // Strafe
+                        ax += Math.cos(bot.angle + Math.PI/2 * bot.strafeDir);
+                        ay += Math.sin(bot.angle + Math.PI/2 * bot.strafeDir);
+                        if(Math.random() < 0.02) bot.strafeDir *= -1;
+                    }
+
+                    // 2. Dodge Bullets
+                    this.bullets.forEach(b => {
+                        if(b.owner !== bot && Math.hypot(b.x - bot.x, b.y - bot.y) < 150) {
+                            // Vector from bullet to bot
+                            const bdx = bot.x - b.x;
+                            const bdy = bot.y - b.y;
+                            // Add perpendicular force
+                            ax += bdx * 0.1;
+                            ay += bdy * 0.1;
+                        }
+                    });
+
+                    // 3. Avoid Walls
+                    const lookAhead = 50;
+                    if(this.checkWall(bot.x + ax*lookAhead, bot.y + ay*lookAhead)) {
+                        ax *= -1; ay *= -1; // Bounce logic
+                    }
+
+                    // Normalize and Move
+                    const len = Math.hypot(ax, ay);
+                    if(len > 0) {
+                        let spd = bot.stats.speed * 0.9; // Bots slightly slower for balance
+                        
+                        // NEW: Slow down bots if in Spike's zone
+                        if (this.inSlowZone(bot)) {
+                            spd *= 0.4; // Strong slow effect
+                        }
+                        
+                        bot.x += (ax/len) * spd;
+                        bot.y += (ay/len) * spd;
+                    }
+
+                    // Attack Logic
+                    if(minDist < bot.stats.range && bot.reloadTimer <= 0) {
+                        this.startAttack(bot, false);
+                    }
+
+                } else {
+                    // Wander if no target
+                    // ... 
+                }
+
+                // Cooldowns
+                if(bot.reloadTimer > 0) bot.reloadTimer -= dt;
+                
+                // Burst Queue Processing for bots
+                if(bot.burstQueue.length > 0) {
+                    const nextShot = bot.burstQueue[0];
+                    if(Date.now() >= nextShot.time) {
+                        this.fireProjectile(bot, nextShot.angle, false);
+                        bot.burstQueue.shift();
+                    }
+                }
+            },
+
+            // --- PHYSICS UTILS ---
+            checkWall(x, y) {
+                // Bounds
+                if(x < 0 || x > this.worldWidth || y < 0 || y > this.worldHeight) return true;
+                // Objects
+                for(let w of this.walls) {
+                    if(x > w.x && x < w.x+w.w && y > w.y && y < w.y+w.h) return true;
+                }
+                return false;
+            },
+
+            checkHit(bullet, entity) {
+                const dx = bullet.x - entity.x;
+                const dy = bullet.y - entity.y;
+                return (dx*dx + dy*dy) < (entity.radius + bullet.radius)**2;
+            },
+
+            // --- RENDERING ---
+            draw() {
+                // Clear
+                this.ctx.fillStyle = '#2c3e50'; // Background color
+                this.ctx.fillRect(0, 0, this.width, this.height);
+
+                this.ctx.save();
+                this.ctx.translate(-this.camera.x, -this.camera.y);
+
+                // Grid
+                this.ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+                this.ctx.lineWidth = 2;
+                for(let x=0; x<this.worldWidth; x+=100) { this.ctx.beginPath(); this.ctx.moveTo(x,0); this.ctx.lineTo(x,this.worldHeight); this.ctx.stroke(); }
+                for(let y=0; y<this.worldHeight; y+=100) { this.ctx.beginPath(); this.ctx.moveTo(0,y); this.ctx.lineTo(this.worldWidth,y); this.ctx.stroke(); }
+
+                // Zones
+                this.zones.forEach(z => {
+                    this.ctx.fillStyle = z.color;
+                    this.ctx.beginPath();
+                    this.ctx.arc(z.x, z.y, z.radius, 0, Math.PI*2);
+                    this.ctx.fill();
+                });
+
+                // Boxes
+                this.boxes.forEach(b => {
+                    this.ctx.fillStyle = '#f39c12';
+                    this.ctx.fillRect(b.x, b.y, b.w, b.h);
+                    this.ctx.fillStyle = '#d35400';
+                    this.ctx.strokeRect(b.x, b.y, b.w, b.h);
+                    // HP
+                    this.ctx.fillStyle = 'red'; this.ctx.fillRect(b.x, b.y-10, b.w, 5);
+                    this.ctx.fillStyle = 'green'; this.ctx.fillRect(b.x, b.y-10, b.w*(b.hp/b.maxHp), 5);
+                });
+
+                // ВХ ЧИТ: если включен, рисуем контуры врагов сквозь стены
+                if(localStorage.getItem('cheatWallhack') === 'true') {
+                    this.ctx.save();
+                    this.ctx.globalAlpha = 0.6;
+                    this.enemies.forEach(e => {
+                        if(e.invisibleTime <= 0) {
+                            // Рисуем контур врага
+                            this.ctx.strokeStyle = '#ff0000';
+                            this.ctx.lineWidth = 3;
+                            this.ctx.beginPath();
+                            this.ctx.arc(e.x, e.y, e.radius + 5, 0, Math.PI*2);
+                            this.ctx.stroke();
+                            
+                            // Рисуем линию от игрока к врагу
+                            this.ctx.strokeStyle = '#00ff00';
+                            this.ctx.lineWidth = 1;
+                            this.ctx.setLineDash([5, 5]);
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(this.player.x, this.player.y);
+                            this.ctx.lineTo(e.x, e.y);
+                            this.ctx.stroke();
+                            
+                            // Сбрасываем пунктир
+                            this.ctx.setLineDash([]);
+                        }
+                    });
+                    this.ctx.restore();
+                }
+
+                // Entities (Shadows first)
+                [...this.enemies, ...this.targets, this.player].forEach(e => {
+                    if(e.invisibleTime > 0 && e !== this.player) return; // Don't draw invisible enemies
+                    this.ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                    this.ctx.beginPath();
+                    this.ctx.ellipse(e.x, e.y+15, e.radius, e.radius/2, 0, 0, Math.PI*2);
+                    this.ctx.fill();
+                });
+
+                // Targets
+                this.targets.forEach(t => {
+                    this.ctx.fillStyle = '#e74c3c';
+                    this.ctx.beginPath(); this.ctx.arc(t.x, t.y, t.radius, 0, Math.PI*2); this.ctx.fill();
+                    this.drawHealthBar(t);
+                });
+
+                // Enemies
+                this.enemies.forEach(e => {
+                    this.drawBrawler(e);
+                    this.drawHealthBar(e);
+                });
+
+                // Player
+                if(!this.player.isDead) {
+                    this.drawBrawler(this.player, true);
+                }
+
+                // Bullets
+                this.bullets.forEach(b => {
+                    this.ctx.fillStyle = b.color;
+                    this.ctx.beginPath(); this.ctx.arc(b.x, b.y, b.radius, 0, Math.PI*2); this.ctx.fill();
+                    // If it's a mine, draw indicator ring
+                    if(b.type === 'cannonball_mine') {
+                         this.ctx.strokeStyle = 'red';
+                         this.ctx.lineWidth = 2;
+                         this.ctx.beginPath(); this.ctx.arc(b.x, b.y, 15, 0, Math.PI*2); this.ctx.stroke();
+                         this.ctx.fillStyle = 'black';
+                         this.ctx.font = '10px Arial';
+                         this.ctx.fillText("MINE", b.x-12, b.y+4);
+                    }
+                });
+
+                // Walls (Draw last to be on top of ground details)
+                this.walls.forEach(w => {
+                    this.ctx.fillStyle = w.color;
+                    this.ctx.fillRect(w.x, w.y, w.w, w.h);
+                    this.ctx.strokeStyle = '#2c3e50';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.strokeRect(w.x, w.y, w.w, w.h);
+                });
+
+                // Particles
+                this.particles.forEach(p => {
+                    this.ctx.fillStyle = p.color;
+                    this.ctx.beginPath(); this.ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); this.ctx.fill();
+                });
+
+                this.ctx.restore();
+            },
+
+            drawBrawler(entity, isPlayer = false) {
+                const b = entity.stats;
+                const radius = entity.radius;
+                
+                // Set transparency for invisible enemies
+                if(entity.invisibleTime > 0 && !isPlayer) {
+                    this.ctx.globalAlpha = 0.4;
+                } else {
+                    this.ctx.globalAlpha = 1.0;
+                }
+
+                // Draw character body (circle base)
+                this.ctx.fillStyle = b.color;
+                this.ctx.beginPath();
+                this.ctx.arc(entity.x, entity.y, radius, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Draw character border
+                this.ctx.strokeStyle = isPlayer ? '#fff' : '#000';
+                this.ctx.lineWidth = isPlayer ? 3 : 2;
+                this.ctx.stroke();
+                
+                // Draw character emoji/icon
+                this.ctx.font = `${radius * 1.5}px Arial`;
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+                this.ctx.fillStyle = 'white';
+                this.ctx.fillText(b.emoji, entity.x, entity.y);
+                
+                // Draw direction indicator for player
+                if(isPlayer) {
+                    this.ctx.strokeStyle = '#fff';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(entity.x, entity.y);
+                    this.ctx.lineTo(
+                        entity.x + Math.cos(entity.angle) * (radius + 15),
+                        entity.y + Math.sin(entity.angle) * (radius + 15)
+                    );
+                    this.ctx.stroke();
+                }
+                
+                // Reset transparency
+                this.ctx.globalAlpha = 1.0;
+            },
+
+            drawHealthBar(e) {
+                const w = 40;
+                const h = 6;
+                this.ctx.fillStyle = 'red';
+                this.ctx.fillRect(e.x - w/2, e.y - e.radius - 15, w, h);
+                this.ctx.fillStyle = 'green';
+                this.ctx.fillRect(e.x - w/2, e.y - e.radius - 15, w * (e.hp / e.maxHp), h);
+            },
+
+            createParticles(x, y, color, count) {
+                for(let i=0; i<count; i++) {
+                    this.particles.push({
+                        x: x, y: y,
+                        vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10,
+                        life: 20, color: color, size: Math.random()*4+2
+                    });
+                }
+            },
+
+            createFloatingText(x, y, text, color) {
+                const el = document.createElement('div');
+                el.className = 'floating-text';
+                el.textContent = text;
+                el.style.left = (x - this.camera.x + this.width/2) + 'px'; // Fix coords relative to screen? 
+                // Wait, HTML overlay needs screen coords.
+                // Simplified: Just update CSS directly based on canvas projection:
+                const rect = this.canvas.getBoundingClientRect();
+                const sx = x - this.camera.x;
+                const sy = y - this.camera.y;
+                
+                // Only show if on screen
+                if(sx > 0 && sx < this.width && sy > 0 && sy < this.height) {
+                    el.style.left = rect.left + sx + 'px';
+                    el.style.top = rect.top + sy + 'px';
+                    el.style.color = color;
+                    document.body.appendChild(el);
+                    setTimeout(() => el.remove(), 1000);
+                }
+            },
+
+            endGame(win, rank) {
+                this.state = 'menu';
+                this.canvas.style.display = 'none';
+                document.getElementById('gameHud').classList.remove('active');
+                
+                let trophyChange = 0;
+                
+                // Trophy Logic from Spec
+                if(rank === 10) trophyChange = -8;
+                else if(rank === 9) trophyChange = -7;
+                else if(rank === 8) trophyChange = -6;
+                else if(rank === 7) trophyChange = -4;
+                else if(rank === 6) trophyChange = -3;
+                else if(rank === 5) trophyChange = 0;
+                else if(rank === 4) trophyChange = 3;
+                else if(rank === 3) trophyChange = 5;
+                else if(rank === 2) trophyChange = 8;
+                else if(rank === 1) trophyChange = 10;
+
+                // Update Brawler Stats
+                const cid = this.selectedBrawlerId;
+                if(!this.brawlerTrophies[cid]) this.brawlerTrophies[cid] = 0;
+                
+                // Prevent negative trophies
+                let newT = this.brawlerTrophies[cid] + trophyChange;
+                if(newT < 0) newT = 0;
+                this.brawlerTrophies[cid] = newT;
+
+                this.saveData();
+                
+                let msg = win ? "ПОБЕДА! 🏆 #1" : `ВЫ ПРОИГРАЛИ. МЕСТО #${rank}`;
+                msg += `\n\nКубки: ${trophyChange > 0 ? '+' : ''}${trophyChange}`;
+                msg += `\nМонет заработано: ${this.coins - JSON.parse(localStorage.getItem('brawlArenaUltra')).coins}`; // Diff calc roughly
+                
+                alert(msg);
+                this.toMenu();
+            },
+
+            exitGame() {
+                // Treated as last place if in battle
+                if(this.mode === 'battle') {
+                    const rank = this.enemies.length + 1;
+                    this.endGame(false, rank);
+                } else {
+                    this.toMenu();
+                }
+            }
+        };
+
+        // Start
+        window.onload = () => game.init();
+
+    </script>
+    <script type="module" src="/index.tsx"></script>
+</body>
+</html>
